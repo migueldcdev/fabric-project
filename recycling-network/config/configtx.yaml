@@ -1,0 +1,185 @@
+
+#   Section: Organizations
+################################################################################
+Organizations:
+
+    - &OrdererOrg
+        Name: OrdererOrg
+        ID: OrdererMSP
+        MSPDir: ../organizations/ordererOrganizations/recycling.com/msp
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('OrdererMSP.member')"
+            Writers:
+                Type: Signature
+                Rule: "OR('OrdererMSP.member')"
+            Admins:
+                Type: Signature
+                Rule: "OR('OrdererMSP.admin')"
+
+        OrdererEndpoints:
+            - orderer.recycling.com:7050
+
+    - &Manufacturer
+        Name: ManufacturerMSP
+        ID: ManufacturerMSP
+
+        MSPDir: ../organizations/peerOrganizations/manufacturer.recycling.com/msp
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('ManufacturerMSP.admin', 'ManufacturerMSP.peer', 'ManufacturerMSP.client')"
+            Writers:
+                Type: Signature
+                Rule: "OR('ManufacturerMSP.admin', 'ManufacturerMSP.client')"
+            Admins:
+                Type: Signature
+                Rule: "OR('ManufacturerMSP.admin')"
+            Endorsement:
+                Type: Signature
+                Rule: "OR('ManufacturerMSP.peer')"
+
+    - &Distributor
+        Name: DistributorMSP
+        ID: DistributorMSP
+
+        MSPDir: ../organizations/peerOrganizations/distributor.recycling.com/msp
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('DistributorMSP.admin', 'DistributorMSP.peer', 'DistributorMSP.client')"
+            Writers:
+                Type: Signature
+                Rule: "OR('DistributorMSP.admin', 'DistributorMSP.client')"
+            Admins:
+                Type: Signature
+                Rule: "OR('DistributorMSP.admin')"
+            Endorsement:
+                Type: Signature
+                Rule: "OR('DistributorMSP.peer')"
+
+    - &Center
+        Name: CenterMSP
+        ID: CenterMSP
+
+        MSPDir: ../organizations/peerOrganizations/center.recycling.com/msp
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('CenterMSP.admin', 'CenterMSP.peer', 'CenterMSP.client')"
+            Writers:
+                Type: Signature
+                Rule: "OR('CenterMSP.admin', 'CenterMSP.client')"
+            Admins:
+                Type: Signature
+                Rule: "OR('CenterMSP.admin')"
+            Endorsement:
+                Type: Signature
+                Rule: "OR('CenterMSP.peer')"
+
+#   SECTION: Capabilities
+################################################################################
+Capabilities:
+    Channel: &ChannelCapabilities
+        V2_0: true
+    Orderer: &OrdererCapabilities
+        V2_0: true
+    Application: &ApplicationCapabilities
+        V2_0: true
+
+
+#   SECTION: Application
+################################################################################
+Application: &ApplicationDefaults
+    Organizations:
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+        LifecycleEndorsement:
+            Type: ImplicitMeta
+            Rule: "ANY Endorsement"
+        Endorsement:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Endorsement"
+
+    Capabilities:
+        <<: *ApplicationCapabilities
+
+#   SECTION: Orderer
+################################################################################
+Orderer: &OrdererDefaults
+    OrdererType: etcdraft
+    Addresses:
+        - orderer.recycling.com:7050
+    EtcdRaft:
+        Consenters:
+        - Host: orderer.recycling.com
+          Port: 7050
+          ClientTLSCert: ../organizations/ordererOrganizations/recycling.com/orderers/orderer.recycling.com/tls/server.crt
+          ServerTLSCert: ../organizations/ordererOrganizations/recycling.com/orderers/orderer.recycling.com/tls/server.crt
+
+    BatchTimeout: 2s
+    BatchSize:
+        MaxMessageCount: 10
+        AbsoluteMaxBytes: 99 MB
+        PreferredMaxBytes: 512 KB
+    Organizations:
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+        BlockValidation:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+
+
+#   CHANNEL
+################################################################################
+Channel: &ChannelDefaults
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+    Capabilities:
+        <<: *ChannelCapabilities
+
+
+#   Profile
+################################################################################
+Profiles:
+
+    RecyclingGenesis:
+        <<: *ChannelDefaults
+        Orderer:
+            <<: *OrdererDefaults
+            Organizations:
+                - *OrdererOrg
+            Capabilities: *OrdererCapabilities
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+                - *Manufacturer                
+                - *Distributor
+                - *Center
+            Capabilities: *ApplicationCapabilities
+
