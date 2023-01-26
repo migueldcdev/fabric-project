@@ -8,8 +8,14 @@ const { Contract } = require('fabric-contract-api');
 class AssetTransfer extends Contract {
     
 
-    // CreateAsset issues a new asset with given details
+    // CreateAsset issues a new asset with given details (only manufacturer)
     async CreateAsset(ctx, manufacturerCode, registrationNumber, serialNumber) {
+        
+        const ctxEmitter = await this.GetTxEmmiter(ctx)
+        if(ctxEmitter != "ManufacturerMSP") {
+            throw new Error("Only a Manufacturer can create a new asset")
+        }
+        
         const exists = await this.AssetExists(ctx, serialNumber);
         if (exists) {
             throw new Error(`The asset ${serialNumber} already exists`);
@@ -28,34 +34,61 @@ class AssetTransfer extends Contract {
 
     // ReadAsset returns the asset
     async ReadAsset(ctx, serialNumber) {
-        const assetJSON = await ctx.stub.getState(serialNumber); // get the asset from chaincode state
+        const assetJSON = await ctx.stub.getState(serialNumber); 
         if (!assetJSON || assetJSON.length === 0) {
             throw new Error(`The asset ${serialNumber} does not exist`);
         }
-        return JSON.parse(assetJSON) //toString()
+        return assetJSON.toString()
     }
-
-    // UpdateAsset updates an existing asset 
-    
-    async UpdateAsset(ctx, id, color, size, owner, appraisedValue) {
-        const exists = await this.AssetExists(ctx, id);
-        if (!exists) {
-            throw new Error(`The asset ${id} does not exist`);
+  
+    // updates asset state to "sold"(only distributor)
+    async UpdateAssetStateSold(ctx, manufacturerCode, registrationNumber, serialNumber) {
+        
+        const ctxEmitter = await this.GetTxEmmiter(ctx)
+        if(ctxEmitter != "DistributorMSP") {
+            throw new Error("Only a Distributor can change to Sold state")
         }
 
-        // overwriting original asset with new asset
+        const exists = await this.AssetExists(ctx, serialNumber);
+        if (!exists) {
+            throw new Error(`The asset ${serialNumber} does not exist`);
+        }        
+
         const updatedAsset = {
-            ID: id,
-            Color: color,
-            Size: size,
-            Owner: owner,
-            AppraisedValue: appraisedValue,
-        };
-        // we insert data in alphabetic order using 'json-stringify-deterministic' and 'sort-keys-recursive'
-        return ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(updatedAsset))));
+            ManufacturerCode: manufacturerCode,
+            RegistrationNumber: registrationNumber,
+            SerialNumber: serialNumber,
+            State: "sold",
+        }
+
+        return ctx.stub.putState(serialNumber, Buffer.from(stringify(sortKeysRecursive(updatedAsset))));
     }
 
-    async UpdateAssetStateSold(ctx, serialNumber) {
+    // updates asset state to "received"(only center)
+    async UpdateAssetStateReceived(ctx, manufacturerCode, registrationNumber, serialNumber) {
+        
+        const ctxEmitter = await this.GetTxEmmiter(ctx)
+        if(ctxEmitter != "CenterMSP") {
+            throw new Error("Only a Center can change to Sold state")
+        }
+
+        const exists = await this.AssetExists(ctx, serialNumber);
+        if (!exists) {
+            throw new Error(`The asset ${serialNumber} does not exist`);
+        }        
+
+        const updatedAsset = {
+            ManufacturerCode: manufacturerCode,
+            RegistrationNumber: registrationNumber,
+            SerialNumber: serialNumber,
+            State: "received",
+        }
+
+        return ctx.stub.putState(serialNumber, Buffer.from(stringify(sortKeysRecursive(updatedAsset))));
+    }
+
+    // updates asset state to "recycled"(only center)
+    async UpdateAssetStateRecycled(ctx, manufacturerCode, registrationNumber, serialNumber) {
         
         const ctxEmitter = await this.GetTxEmmiter(ctx)
         if(ctxEmitter != "DistributorMSP") {
@@ -65,19 +98,18 @@ class AssetTransfer extends Contract {
         const exists = await this.AssetExists(ctx, serialNumber);
         if (!exists) {
             throw new Error(`The asset ${serialNumber} does not exist`);
-        }
-
-        const assetJSON = await ctx.stub.getState(serialNumber);
+        }        
 
         const updatedAsset = {
-            ManufacturerCode: assetJSON.manufacturerCode,
-            RegistrationNumber: assetJSON.registrationNumber,
+            ManufacturerCode: manufacturerCode,
+            RegistrationNumber: registrationNumber,
             SerialNumber: serialNumber,
-            State: "sold",
+            State: "recycled",
         }
 
         return ctx.stub.putState(serialNumber, Buffer.from(stringify(sortKeysRecursive(updatedAsset))));
     }
+
 
     // DeleteAsset deletes an given asset from the world state.
     async DeleteAsset(ctx, serialNumber) {
