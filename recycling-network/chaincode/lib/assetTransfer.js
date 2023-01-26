@@ -1,12 +1,10 @@
 'use strict';
 
-// Deterministic JSON.stringify()
 const stringify  = require('json-stringify-deterministic');
 const sortKeysRecursive  = require('sort-keys-recursive');
 const { Contract } = require('fabric-contract-api');
 
-class AssetTransfer extends Contract {
-    
+class AssetTransfer extends Contract {    
 
     // CreateAsset issues a new asset with given details (only manufacturer)
     async CreateAsset(ctx, manufacturerCode, registrationNumber, serialNumber) {
@@ -32,7 +30,7 @@ class AssetTransfer extends Contract {
         return JSON.stringify(asset);
     }
 
-    // ReadAsset returns the asset
+    // ReadAsset returns the asset if exists
     async ReadAsset(ctx, serialNumber) {
         const assetJSON = await ctx.stub.getState(serialNumber); 
         if (!assetJSON || assetJSON.length === 0) {
@@ -120,7 +118,7 @@ class AssetTransfer extends Contract {
         return ctx.stub.deleteState(serialNumber);
     }
 
-    // AssetExists returns true when asset with given ID exists in world state.
+    // AssetExists returns true when asset with given serialNumber exists 
     async AssetExists(ctx, serialNumber) {
         const assetJSON = await ctx.stub.getState(serialNumber);
         return assetJSON && assetJSON.length > 0;
@@ -131,7 +129,7 @@ class AssetTransfer extends Contract {
         return ctx.clientIdentity.getMSPID();
     }
 
-    // GetAllAssets returns all assets found in the world state.
+    // GetAllAssets returns all assets found 
     async GetAllAssets(ctx) {
         const allResults = [];
         // range query with empty string for startKey and endKey does an open-ended query of all assets in the chaincode namespace.
