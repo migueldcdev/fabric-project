@@ -91,8 +91,8 @@ class AssetTransfer extends Contract {
     async UpdateAssetStateRecycled(ctx, manufacturerCode, registrationNumber, serialNumber) {
         
         const ctxEmitter = await this.GetTxEmmiter(ctx)
-        if(ctxEmitter != "DistributorMSP") {
-            throw new Error("Only a distributor can change to Sold state")
+        if(ctxEmitter != "CenterMSP") {
+            throw new Error("Only a Center can change to Sold state")
         }
 
         const exists = await this.AssetExists(ctx, serialNumber);
